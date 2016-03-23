@@ -51,7 +51,7 @@ master_actor(Subscriptions, Receivers, Channels) ->
 
     {Sender, log_out, UserName} ->
       % We first notify all channels the user subscribes to and dispose of the receiver.
-      log_out(Sender, gb_trees:get(UserName, Receivers), dict:lookup(UserName, Subscriptions), Channels),
+      log_out(Sender, gb_trees:get(UserName, Receivers), dict:fetch(UserName, Subscriptions), Channels),
       Sender ! {self(), logged_out},
       master_actor(Subscriptions, gb_trees:delete(UserName, Receivers), Channels);
 
