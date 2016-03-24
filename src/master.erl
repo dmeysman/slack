@@ -58,6 +58,7 @@ master_actor(Subscriptions, Receivers, Channels) ->
     {Sender, join_channel, UserName, ChannelName} ->
       NewSubscriptions = dict:update(UserName, subscribe(ChannelName), Subscriptions),
       NewChannels = find_or_create_channel(gb_trees:values(Receivers), ChannelName, Channels),
+      dict:fetch(ChannelName, NewChannels) ! {self(), join_channel, {user, UserName, Sender}},
       Sender ! {self(), channel_joined},
       master_actor(NewSubscriptions, Receivers, NewChannels);
 
