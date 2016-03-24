@@ -20,8 +20,8 @@ receiver_actor(Channels) ->
   receive
     {Sender, log_out, UserName} ->
       % We delegate the work to the registered master process.
-      master_actor ! {Sender, log_out, UserName},
-      receiver_actor(Channels);
+      master_actor ! {Sender, log_out, UserName};
+      % We do not proceed, as there is no longer any use for us.
 
     {Sender, send_message, UserName, ChannelName, MessageText, SentTime} ->
       % We ask the channel to broadcast the message by fetching its pid through its name.

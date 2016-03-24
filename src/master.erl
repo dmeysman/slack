@@ -51,7 +51,7 @@ master_actor(Subscriptions, Receivers, Channels) ->
 
     {Sender, log_out, UserName} ->
       % We first notify all channels the user subscribes to and dispose of the receiver.
-      log_out(Sender, gb_trees:get(UserName, Receivers), dict:fetch(UserName, Subscriptions), Channels),
+      log_out(Sender, dict:fetch(UserName, Subscriptions), Channels),
       Sender ! {self(), logged_out},
       master_actor(Subscriptions, gb_trees:delete(UserName, Receivers), Channels);
 
@@ -76,11 +76,9 @@ log_in(UserPid, {user, SubscriberName, Subscriptions}, Channels) ->
   % Finally, we return the process identifier of the newly created receiver.
   Receiver.
 
-log_out(UserPid, Receiver, {user, SubscriberName, Subscriptions}, Channels) ->
+log_out(UserPid, {user, SubscriberName, Subscriptions}, Channels) ->
   % We notify all channels the user subscribes to that he wishes to leave them.
-  _ = [dict:fetch(Subscription, Channels) ! {self(), leave_channel, {user, SubscriberName, UserPid}} || Subscription <- sets:to_list(Subscriptions)],
-  % We then dispose of user's receiver.
-  exit(Receiver, ok).
+  _ = [dict:fetch(Subscription, Channels) ! {self(), leave_channel, {user, SubscriberName, UserPid}} || Subscription <- sets:to_list(Subscriptions)].
 
 find_or_create_channel(ReceiverPids, ChannelName, Channels) ->
   case dict:find(ChannelName, Channels) of
