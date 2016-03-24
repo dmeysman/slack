@@ -62,7 +62,8 @@ master_actor(Subscriptions, Receivers, Channels) ->
       master_actor(NewSubscriptions, Receivers, NewChannels);
 
     {Sender, get_channel_history, ChannelName} ->
-      dict:fetch(ChannelName, Channels) ! {Sender, get_channel_history}
+      dict:fetch(ChannelName, Channels) ! {Sender, get_channel_history},
+      master_actor(Subscriptions, Receivers, Channels)
   end.
 
 -spec log_in(UserPid  :: pid(),
