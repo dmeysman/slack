@@ -30,14 +30,14 @@ receiver_actor(Channels) ->
       receiver_actor(Channels);
 
     {Sender, join_channel, UserName, ChannelName} ->
-      master_actor ! {Sender, join_channel, UserName, ChannelName},
+      master_actor ! {Sender, self(), join_channel, UserName, ChannelName},
       receiver_actor(Channels);
 
     {Sender, get_channel_history, ChannelName} ->
       % We delegate the history retrieval to the channel process by fetching its pid through its name.
       dict:fetch(ChannelName, Channels) ! {Sender, get_channel_history};
 
-    {_, updated_channels, NewChannels} ->
+    {_, new_channel, {channel, ChannelName, ChannelPid}} ->
       % We proceed with the new state.
-      receiver_actor(NewChannels)
+      receiver_actor(dict:store(ChannelName, ChannelPid, Channels))
   end.

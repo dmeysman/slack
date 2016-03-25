@@ -57,17 +57,19 @@ master_actor(Subscriptions, Receivers, Channels) ->
       % Finally we proceed with the user removed from our receivers tree.
       master_actor(Subscriptions, gb_trees:delete(UserName, Receivers), Channels);
 
-    {Sender, join_channel, UserName, ChannelName} ->
+    {Sender, Receiver, join_channel, UserName, ChannelName} ->
       % We first subscribe the user to the channel.
       NewSubscriptions = dict:update(UserName, subscribe(ChannelName), Subscriptions),
       % We then spawn a new channel process if the channel does not exist yet.
-      NewChannels = find_or_create_channel(gb_trees:values(Receivers), ChannelName, Channels),
+      ChannelPid = find_or_create_channel(ChannelName, Channels),
+      % The user's receiver needs to be aware of the new channel's information.
+      Receiver ! {self(), new_channel, {channel, ChannelName, ChannelPid}},
       % Now we notify the channel that a user wishes to join it.
-      dict:fetch(ChannelName, NewChannels) ! {self(), join_channel, {user, UserName, Sender}},
+      ChannelPid ! {self(), join_channel, {user, UserName, Sender}},
       % We do not forget to notify the sender that the user has successfully joined the channel.
       Sender ! {self(), channel_joined},
       % Finally, we proceed with the new state.
-      master_actor(NewSubscriptions, Receivers, NewChannels);
+      master_actor(NewSubscriptions, Receivers, dict:store(ChannelName, ChannelPid, Channels));
 
     {Sender, get_channel_history, ChannelName} ->
       % We forward requests for channel histories to the channel processes.
@@ -100,17 +102,14 @@ log_out(UserPid, {user, SubscriberName, Subscriptions}, Channels) ->
   %   http://erlang.org/doc/efficiency_guide/listHandling.html#id67631.
   _ = [dict:fetch(Subscription, Channels) ! {self(), leave_channel, {user, SubscriberName, UserPid}} || Subscription <- sets:to_list(Subscriptions)].
 
--spec find_or_create_channel(ReceiverPids :: [pid()],
-                             ChannelName  :: string(),
-                             Channels     :: dict:dict(string(), pid())) -> dict:dict(string(), pid()).
-find_or_create_channel(ReceiverPids, ChannelName, Channels) ->
+-spec find_or_create_channel(ChannelName  :: string(),
+                             Channels     :: dict:dict(string(), pid())) -> pid().
+find_or_create_channel(ChannelName, Channels) ->
   case dict:find(ChannelName, Channels) of
-    {ok, _} ->
-      Channels;
+    {ok, ChannelPid} ->
+      ChannelPid;
     error ->
-      NewChannels = dict:store(ChannelName, channel:initialize(), Channels),
-      _ = [ReceiverPid ! {self(), updated_channels, NewChannels} || ReceiverPid <- ReceiverPids],
-      NewChannels
+      channel:initialize()
   end.
 
 -spec subscribe(string()) -> fun(({user, string(), sets:set(string())}) -> {user, string(), sets:set(string())}).
