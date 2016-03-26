@@ -33,7 +33,8 @@ receiver_actor(Channels) ->
 
     {Sender, get_channel_history, ChannelName} ->
       % We delegate the history retrieval to the channel process by fetching its pid through its name.
-      dict:fetch(ChannelName, Channels) ! {Sender, get_channel_history};
+      dict:fetch(ChannelName, Channels) ! {Sender, get_channel_history},
+      receiver_actor(Channels);
 
     {_, new_channel, {channel, ChannelName, ChannelPid}} ->
       % We proceed with the new state.
