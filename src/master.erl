@@ -25,7 +25,7 @@ initialize_with(Subscriptions, Receivers, Channels) ->
 
 -spec master_actor(Subscriptions :: dict:dict(string(), {user, string(), sets:set(string())}),
                    Receivers     :: gb_trees:tree(string(), pid()),
-                   Channels      :: dict:dict(string(), pid())) -> any().
+                   Channels      :: dict:dict(string(), pid())) -> no_return().
 %% @doc Represents a master process.
 master_actor(Subscriptions, Receivers, Channels) ->
   receive
@@ -92,13 +92,14 @@ log_in(UserPid, {user, SubscriberName, Subscriptions}, Channels) ->
 
 -spec log_out(UserPid  :: pid(),
               User     :: {user, string(), sets:set(string())},
-              Channels :: dict:dict(string(), pid())) -> any().
+              Channels :: dict:dict(string(), pid())) -> ok.
 log_out(UserPid, {user, SubscriberName, Subscriptions}, Channels) ->
   % We notify all channels the user subscribes to that he wishes to leave them.
   %   We use a list comprehension here instead of lists:foreach/2, because the
   %   compiler optimizes the construction of the result list away, as per
   %   http://erlang.org/doc/efficiency_guide/listHandling.html#id67631.
-  _ = [dict:fetch(Subscription, Channels) ! {self(), leave_channel, {user, SubscriberName, UserPid}} || Subscription <- sets:to_list(Subscriptions)].
+  _ = [dict:fetch(Subscription, Channels) ! {self(), leave_channel, {user, SubscriberName, UserPid}} || Subscription <- sets:to_list(Subscriptions)],
+  ok.
 
 -spec find_or_create_channel(ChannelName  :: string(),
                              Channels     :: dict:dict(string(), pid())) -> pid().

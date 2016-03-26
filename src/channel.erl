@@ -13,13 +13,13 @@ initialize() ->
   initialize_with(gb_trees:empty(), gb_trees:empty()).
 
 -spec initialize_with(ActiveUsers :: gb_trees:tree(string(), pid()),
-                      History     :: gb_trees:tree(integer(), any())) -> pid().
+                      History     :: gb_trees:tree(integer(), {message, any(), any(), any(), integer()})) -> pid().
 %% @doc Creates a new channel process with `ActiveUsers' and `History'.
 initialize_with(ActiveUsers, History) ->
   spawn_link(?MODULE, channel_actor, [ActiveUsers, History]).
 
 -spec channel_actor(ActiveUsers :: gb_trees:tree(string(), pid()),
-                    History     :: gb_trees:tree(integer(), any())) -> any().
+                    History     :: gb_trees:tree(integer(), {message, any(), any(), any(), integer()})) -> no_return().
 %% @doc Represents a channel process.
 channel_actor(ActiveUsers, History) ->
   receive
@@ -50,12 +50,12 @@ channel_actor(ActiveUsers, History) ->
   end.
 
 -spec broadcast(Sender  :: pid(),
-                Message :: any(),
-                Users   :: [pid()]) -> {pid(), broadcast_done, any()}.
+                Message :: {message, any(), any(), any(), any()},
+                Users   :: [pid()]) -> ok.
 %% @doc Broadcasts `Message' to all elements of `Users' and notifies `Sender' when it is done.
 broadcast(Sender, Message, Users) ->
   % We use a list comprehension here instead of lists:foreach/2, because the
   %   compiler optimizes the construction of the result list away, as per
   %   http://erlang.org/doc/efficiency_guide/listHandling.html#id67631.
   _ = [User ! {Sender, new_message, Message} || User <- Users],
-  Sender ! {self(), broadcast_done, Message}.
+  ok.
