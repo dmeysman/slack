@@ -5,8 +5,6 @@
 %% @copyright 2016 Dylan Meysmans
 -module(channel).
 
--include_lib("eunit/include/eunit.hrl").
-
 -export([initialize/0, initialize_with/2, channel_actor/2, broadcast/3]).
 
 -spec initialize() -> pid().

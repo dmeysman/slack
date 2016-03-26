@@ -5,8 +5,6 @@
 %% @copyright 2016 Dylan Meysmans
 -module(master).
 
--include_lib("eunit/include/eunit.hrl").
-
 -export([initialize/0, initialize_with/3, master_actor/3]).
 
 -spec initialize() -> pid().

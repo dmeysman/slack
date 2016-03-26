@@ -5,8 +5,6 @@
 %% @copyright 2016 Dylan Meysmans
 -module(receiver).
 
--include_lib("eunit/include/eunit.hrl").
-
 -export([initialize/0, initialize_with/1, receiver_actor/1]).
 
 initialize() ->
