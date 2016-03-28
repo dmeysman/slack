@@ -5,29 +5,27 @@
 %% @copyright 2016 Dylan Meysmans
 -module(master).
 
--export([initialize/0, initialize_with/3, master_actor/3]).
+-export([initialize/0, initialize_with/2, master_actor/2, log_in/3]).
 
 -spec initialize() -> pid().
-%% @doc Creates a new master process with no users, no receivers, and no channels.
+%% @doc Creates a new master process with no users and no channels.
 initialize() ->
-  initialize_with(dict:new(), gb_trees:empty(), dict:new()).
+  initialize_with(dict:new(), dict:new()).
 
 -spec initialize_with(Subscriptions :: dict:dict(string(), {user, string(), sets:set(string())}),
-                      Receivers     :: gb_trees:tree(string(), pid()),
                       Channels      :: dict:dict(string(), pid())) -> pid().
 %% @doc Creates a new master process with `Subscriptions', `Receivers',
 %%   and `Channels'.
-initialize_with(Subscriptions, Receivers, Channels) ->
-  Master = spawn_link(?MODULE, master_actor, [Subscriptions, Receivers, Channels]),
+initialize_with(Subscriptions, Channels) ->
+  Master = spawn_link(?MODULE, master_actor, [Subscriptions, Channels]),
   catch unregister(master_actor),
   register(master_actor, Master),
   Master.
 
 -spec master_actor(Subscriptions :: dict:dict(string(), {user, string(), sets:set(string())}),
-                   Receivers     :: gb_trees:tree(string(), pid()),
                    Channels      :: dict:dict(string(), pid())) -> no_return().
 %% @doc Represents a master process.
-master_actor(Subscriptions, Receivers, Channels) ->
+master_actor(Subscriptions, Channels) ->
   receive
     {Sender, register_user, UserName} ->
       % We first create a new user subscribed to no channels.
@@ -36,7 +34,7 @@ master_actor(Subscriptions, Receivers, Channels) ->
       %   not logged in at this point.
       Sender ! {self(), user_registered},
       % Finally, we proceed with the new state.
-      master_actor(NewSubscriptions, Receivers, Channels);
+      master_actor(NewSubscriptions, Channels);
 
     {Sender, log_in, UserName} ->
       % We first create a receiver and notify all channels the user subscribes to.
@@ -44,16 +42,16 @@ master_actor(Subscriptions, Receivers, Channels) ->
       % We then tell the user to send all future messages to its receiver
       %   instead of us.
       Sender ! {Receiver, logged_in},
-      % Finally, we register the receiver to the user's name in our state and proceed.
-      master_actor(Subscriptions, gb_trees:insert(UserName, Receiver, Receivers), Channels);
+      % Finally, we proceed.
+      master_actor(Subscriptions, Channels);
 
     {Sender, log_out, UserName} ->
       % We first notify all channels the user subscribes to and dispose of the receiver.
       log_out(Sender, dict:fetch(UserName, Subscriptions), Channels),
       % We then notify the sender that we successfully logged the user out.
       Sender ! {self(), logged_out},
-      % Finally we proceed with the user removed from our receivers tree.
-      master_actor(Subscriptions, gb_trees:delete(UserName, Receivers), Channels);
+      % Finally, we proceed.
+      master_actor(Subscriptions, Channels);
 
     {Sender, Receiver, join_channel, UserName, ChannelName} ->
       % We first subscribe the user to the channel.
@@ -67,13 +65,13 @@ master_actor(Subscriptions, Receivers, Channels) ->
       % We do not forget to notify the sender that the user has successfully joined the channel.
       Sender ! {self(), channel_joined},
       % Finally, we proceed with the new state.
-      master_actor(NewSubscriptions, Receivers, dict:store(ChannelName, ChannelPid, Channels));
+      master_actor(NewSubscriptions, dict:store(ChannelName, ChannelPid, Channels));
 
     {Sender, get_channel_history, ChannelName} ->
       % We forward requests for channel histories to the channel processes.
       dict:fetch(ChannelName, Channels) ! {Sender, get_channel_history},
       % We then proceed with the same state.
-      master_actor(Subscriptions, Receivers, Channels)
+      master_actor(Subscriptions, Channels)
   end.
 
 -spec log_in(UserPid  :: pid(),
