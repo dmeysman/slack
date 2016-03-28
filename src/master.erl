@@ -5,7 +5,7 @@
 %% @copyright 2016 Dylan Meysmans
 -module(master).
 
--export([initialize/0, initialize_with/2, master_actor/2, log_in/3]).
+-export([initialize/0, initialize_with/2, master_actor/2]).
 
 -spec initialize() -> pid().
 %% @doc Creates a new master process with no users and no channels.
@@ -39,18 +39,7 @@ master_actor(Subscriptions, Channels) ->
     {Sender, log_in, UserName} ->
       % We first create a receiver for the user and tell him to send all future
       %   messages to his receiver instead of us.
-      Sender ! {receiver:initialize_with(Channels), logged_in},
-      % We now asynchronously notify all channels the user subscribes to of his presence,
-      %   unless he has no subscriptions, e.g. in the case of a newly registered user.
-      {user, UserName, UserSubscriptions} = dict:fetch(UserName, Subscriptions),
-      NumberOfSubscriptions = sets:size(UserSubscriptions),
-      if
-        % We could use a higher value here and handle very small sets synchronously.
-        NumberOfSubscriptions > 0 ->
-          spawn_link(?MODULE, log_in, [Sender, {user, UserName, UserSubscriptions}, Channels]);
-        true ->
-          ok
-      end,
+      Sender ! {receiver:initialize_with(Sender, dict:fetch(UserName, Subscriptions), Channels), logged_in},
       % Finally, we proceed.
       master_actor(Subscriptions, Channels);
 
@@ -82,17 +71,6 @@ master_actor(Subscriptions, Channels) ->
       % We then proceed with the same state.
       master_actor(Subscriptions, Channels)
   end.
-
--spec log_in(UserPid  :: pid(),
-             User     :: {user, string(), sets:set(string())},
-             Channels :: dict:dict(string(), pid())) -> ok.
-log_in(UserPid, {user, SubscriberName, Subscriptions}, Channels) ->
-  % We notify all channels the user subscribes to that he wishes to join them.
-  %   We use a list comprehension here instead of lists:foreach/2, because the
-  %   compiler optimizes the construction of the result list away, as per
-  %   http://erlang.org/doc/efficiency_guide/listHandling.html#id67631.
-  _ = [dict:fetch(Subscription, Channels) ! {self(), join_channel, {user, SubscriberName, UserPid}} || Subscription <- sets:to_list(Subscriptions)],
-  ok.
 
 -spec log_out(UserPid  :: pid(),
               User     :: {user, string(), sets:set(string())},

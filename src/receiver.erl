@@ -5,13 +5,26 @@
 %% @copyright 2016 Dylan Meysmans
 -module(receiver).
 
--export([initialize/0, initialize_with/1, receiver_actor/1]).
+-export([initialize_with/3, receiver_actor/3]).
 
-initialize() ->
-  initialize_with(dict:new()).
+-spec initialize_with(UserPid  :: pid(),
+                      User     :: {user, string(), sets:set(string())},
+                      Channels :: dict:dict(string(), pid())) -> pid().
+initialize_with(UserPid, User, Channels) ->
+  spawn_link(?MODULE, receiver_actor, [UserPid, User, Channels]).
 
-initialize_with(Channels) ->
-  spawn_link(?MODULE, receiver_actor, [Channels]).
+-spec receiver_actor(UserPid  :: pid(),
+                     User     :: {user, string(), sets:set(string())},
+                     Channels :: dict:dict(string(), pid())) -> ok.
+receiver_actor(UserPid, {user, SubscriberName, Subscriptions}, Channels) ->
+  % We notify all channels the user subscribes to that he wishes to join them.
+  %   We use a list comprehension here instead of lists:foreach/2, because the
+  %   compiler optimizes the construction of the result list away, as per
+  %   http://erlang.org/doc/efficiency_guide/listHandling.html#id67631.
+  _ = [dict:fetch(Subscription, Channels) ! {self(), join_channel, {user, SubscriberName, UserPid}} || Subscription <- sets:to_list(Subscriptions)],
+  % We proceed without the user information, but we could continue to keep track
+  %   of it in order to ensure the user only sends messages to channels he subscribes to.
+  receiver_actor(Channels).
 
 -spec receiver_actor(Channels :: dict:dict(string(), pid())) -> ok.
 receiver_actor(Channels) ->
