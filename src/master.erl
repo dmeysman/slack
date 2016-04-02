@@ -85,10 +85,14 @@ log_out(UserPid, {user, SubscriberName, Subscriptions}, Channels) ->
 
 -spec find_or_create_channel(ChannelName  :: string(),
                              Channels     :: dict:dict(string(), pid())) -> pid().
+%% @doc Finds an existing channel in `Channels' by `ChannelName' or creates a
+%%   new one named `ChannelName'.
 find_or_create_channel(ChannelName, Channels) ->
   case dict:find(ChannelName, Channels) of
+    % If the channel already exists, we return its process identifier.
     {ok, ChannelPid} ->
       ChannelPid;
+    % If it does not, we initialize a new channel and return its process identifier.
     error ->
       channel:initialize()
   end.
