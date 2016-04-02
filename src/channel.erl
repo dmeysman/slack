@@ -43,7 +43,7 @@ channel_actor(ActiveUsers, History) ->
       channel_actor(ActiveUsers, History);
 
     {Sender, broadcast, {message, ActiveUserName, _, _, SendTime} = Message} ->
-      broadcast(Sender, Message, gb_trees:values(gb_trees:delete(ActiveUserName, ActiveUsers))),
+      broadcast(Sender, Message, gb_trees:values(gb_trees:delete_any(ActiveUserName, ActiveUsers))),
       % The channel history should always be in chronological order,
       %   we therefore store messages in a dictionary ordered by their timestamp.
       channel_actor(ActiveUsers, gb_trees:enter(SendTime, Message, History))
