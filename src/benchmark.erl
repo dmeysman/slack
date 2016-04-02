@@ -222,7 +222,6 @@ test_send_message_debug(NUMBER_OF_USERS, NUMBER_OF_ONLINE_USERS, NUMBER_OF_ACTIV
 
             send_message_for_users(ChosenClients, ClientsSubscribedTo1, Clients)
         end,
-        30).
 
 % test_send_random_message(NUMBER_OF_USERS, NUMBER_OF_ONLINE_USERS, NUMBER_OF_ACTIVE_USERS, NUMBER_OF_CHANNELS) ->
 %     run_benchmark("random message",
@@ -260,6 +259,7 @@ test_send_message_debug(NUMBER_OF_USERS, NUMBER_OF_ONLINE_USERS, NUMBER_OF_ACTIV
 %                         ExpectedReceivers) end,
 %                 Clients) end,
 %         30).
+        1).
 
 % stress test one channel all -> all
 send_message_for_users(ChosenClients, ClientsSubscribedToChannel, Clients) ->
